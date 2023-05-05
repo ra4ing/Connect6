@@ -154,9 +154,8 @@ public class GameEvent {
 
     public static void main(String[] args) {
         GameEvent event = new GameEvent("Report01");
-        event.addPlayer(new g02.AI());
-        event.addPlayer(new g04.AI());
-        event.addPlayer(new g03.AI());
+        event.addPlayer(new method_1.AI());
+        event.addPlayer(new g09.AI());
         event.arrangeMatches(500);
         event.runSingleThread();
         event.showResults();

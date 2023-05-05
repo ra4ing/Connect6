@@ -7,7 +7,7 @@ import java.util.Random;
 import static core.game.Move.col;
 import static core.game.Move.row;
 
-public class Board extends core.board.Board {
+public class G09Board extends core.board.Board {
     public static int[][][] zobristTable = new int[19][19][3];//zobrist
 
     static {
@@ -43,6 +43,14 @@ public class Board extends core.board.Board {
 
     public void makeMove(int c0, int r0, int c1, int r1) {
         super.makeMove(new G09Move(c0, r0, c1, r1));
+    }
+
+    public void makeOneMove(int c, int r, PieceColor color) {
+        super.set(col(c), row(r), color);
+    }
+
+    public void unMakeOneMove(int c, int r) {
+        super.set(col(c), row(r), PieceColor.EMPTY);
     }
 
 }

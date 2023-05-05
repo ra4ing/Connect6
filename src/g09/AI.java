@@ -8,9 +8,14 @@ import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Random;
 
+import javafx.util.Pair;
+
+import static core.game.Move.col;
+import static core.game.Move.row;
+
 public class AI extends core.player.AI {
     private PieceColor selfColor = PieceColor.EMPTY;
-    Board board = new Board();
+    G09Board board = new G09Board();
     private ArrayList<Road> selfRoads;
     private ArrayList<Road> opponentRoads;
 
@@ -41,20 +46,14 @@ public class AI extends core.player.AI {
             return move;
         }
 
-        // 威胁处理
+        // 威胁处理 （生成onePoint，指代这里只用一个棋子防守）
         move = findThreatMove();
         if (move != null) {
             this.board.makeMove(move);
             return move;
         }
 
-        // 博弈树搜索
-        if (onePoint != null) {
-
-        } else {
-
-        }
-
+        // 博弈树搜索 （利用onePoint， 分两种情况寻找路径）
         move = findBestMove();
         if (move != null) {
             this.board.makeMove(move);
@@ -98,28 +97,82 @@ public class AI extends core.player.AI {
 
     private ArrayList<Move> generateMove(int depth) {
         ArrayList<Move> moves = new ArrayList<>();
+        if (depth == maxDepth && onePoint != null) {
 
+            this.board.makeOneMove(onePoint.c, onePoint.r, board.whoseMove());
+            ArrayList<Point> points = generatePoint(20);
+            this.board.unMakeOneMove(onePoint.c, onePoint.r);
 
-
+            for (Point p : points) {
+                moves.add(new Move(col(onePoint.c), row(onePoint.r), col(p.c), row(p.r)));
+            }
+            onePoint = null;
+        } else {
+            ArrayList<Point> points1 = generatePoint(7);
+            for (Point p1 : points1) {
+                this.board.makeOneMove(p1.c, p1.r, board.whoseMove());
+                ArrayList<Point> points2 = generatePoint(7);
+                this.board.unMakeOneMove(p1.c, p1.r);
+                for (Point p2 : points2) {
+                    moves.add(new Move(col(onePoint.c), row(onePoint.r), col(p2.c), row(p2.r)));
+                }
+            }
+        }
         return moves;
+    }
+
+    private ArrayList<Point> generatePoint(int num) {
+        ArrayList<Point> points = new ArrayList<>();
+        if (this.board.gameOver()) {
+            Point p = generateRandomPosition();
+            points.add(p);
+            return points;
+        }
+        HashMap<Integer, ArrayList<Road>> roads = generateRoads();
+        Pair<Integer, Integer> values = getSelfAndOpponentValues(roads);
+        int selfValue = values.getKey();
+        ArrayList<Road> selfR = roads.get(selfValue);
+
+        //给出评分棋盘
+        int[] add = new int[]{1, 10, 100, 1000, 10000};
+        int[] scores = new int[361];
+        for (int i = 0; i < 361; ++i) {
+            scores[i] = 0;
+        }
+        for (Road road : selfR) {
+            for (int i = 0; i < 6; ++i) {
+                int index = road.roadPosition[i].r * 19 + road.roadPosition[i].c;
+                if (road.roadColor[i] == PieceColor.EMPTY) {
+                    scores[index] += add[road.stonesNum - 1];
+                } else {
+                    scores[index] = -1;
+                }
+            }
+        }
+        //取得分最大的num个点
+        int[] positions = new int[num];
+        int maxScore;
+        for (int j = 0; j < num; ++j) {
+            positions[j] = 0;
+            maxScore = -1;
+            for (int i = 0; i < 361; ++i) {
+                if (scores[i] > maxScore) {
+                    maxScore = scores[i];
+                    positions[j] = i;
+                }
+            }
+            scores[positions[j]] = -1;
+            points.add(new Point(positions[j] % 19, positions[j] / 19));
+        }
+
+        return points;
     }
 
     private int evaluate() {
         HashMap<Integer, ArrayList<Road>> roads = generateRoads();
-        int whiteValue = (int) roads.keySet().toArray()[0];
-        int blackValue = (int) roads.keySet().toArray()[1];
+        Pair<Integer, Integer> values = getSelfAndOpponentValues(roads);
 
-        if (whiteValue < 0) {
-            int t = whiteValue;
-            whiteValue = blackValue;
-            blackValue = t;
-        }
-        blackValue = -blackValue;
-
-        int selfValue = (board.whoseMove() == PieceColor.WHITE ? whiteValue : blackValue);
-        int opponentValue = whiteValue + blackValue - selfValue;
-
-        return selfValue - opponentValue;
+        return values.getKey() - values.getValue();
     }
 
     private Point onePoint = null;
@@ -140,7 +193,7 @@ public class AI extends core.player.AI {
         return null;
     }
 
-    private void initializeScores(Board board, int[] scores) {
+    private void initializeScores(G09Board board, int[] scores) {
         for (int i = 0; i < 361; ++i) {
             if (board.get(i % 19, i / 19) != PieceColor.EMPTY) scores[i] = -1;
         }
@@ -251,21 +304,27 @@ public class AI extends core.player.AI {
 
     private void setRoads() {
         HashMap<Integer, ArrayList<Road>> roads = generateRoads();
-        int greater = (int) roads.keySet().toArray()[0];
-        int smaller = (int) roads.keySet().toArray()[1];
+        Pair<Integer, Integer> values = getSelfAndOpponentValues(roads);
+        selfRoads = roads.get(values.getKey());
+        opponentRoads = roads.get(values.getValue());
+    }
 
-        if (greater < 0) {
-            int t = greater;
-            greater = smaller;
-            smaller = t;
+    private Pair<Integer, Integer> getSelfAndOpponentValues(HashMap<Integer, ArrayList<Road>> roads) {
+        int whiteValue = (int) roads.keySet().toArray()[0];
+        int blackValue = (int) roads.keySet().toArray()[1];
+
+        if (whiteValue < 0) {
+            int t = whiteValue;
+            whiteValue = blackValue;
+            blackValue = t;
         }
 
-        int selfValue = (board.whoseMove() == PieceColor.WHITE ? greater : smaller);
-        int opponentValue = greater + smaller - selfValue;
+        int selfValue = (board.whoseMove() == PieceColor.WHITE ? whiteValue : blackValue);
+        int opponentValue = whiteValue + blackValue - selfValue;
 
-        selfRoads = roads.get(selfValue);
-        opponentRoads = roads.get(opponentValue);
+        return new Pair<>(selfValue, opponentValue);
     }
+
 
     private Move findFirstMove() {
         Move move = null;
@@ -299,7 +358,7 @@ public class AI extends core.player.AI {
                     }
                 }
                 do {
-                    winPosition[1] = findRandomPosition();
+                    winPosition[1] = generateRandomPosition();
                 } while (winPosition[1].c == winPosition[0].c && winPosition[1].r == winPosition[0].r);
                 return new G09Move(winPosition[0], winPosition[1]);
             }
@@ -307,7 +366,7 @@ public class AI extends core.player.AI {
         return null;
     }
 
-    public Point findRandomPosition() {
+    public Point generateRandomPosition() {
         Random rand = new Random();
         int index1;
         do {
@@ -404,5 +463,8 @@ public class AI extends core.player.AI {
         return "g09";
     }
 
-
+    public static void main(String[] args) throws Exception {
+        AI ai = new AI();
+        ai.findMove(new Move(1,2));
+    }
 }

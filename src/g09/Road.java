@@ -15,5 +15,7 @@ public class Road {
         this.stonesNum = num;
         System.arraycopy(roadC, 0, this.roadColor, 0, 6);
         System.arraycopy(roadP, 0, this.roadPosition, 0, 6);
+        this.roadColor = roadC;
+        this.roadPosition = roadP;
     }
 }
