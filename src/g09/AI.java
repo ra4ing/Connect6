@@ -4,6 +4,7 @@ import core.board.PieceColor;
 import core.game.Move;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Random;
 
@@ -12,8 +13,6 @@ public class AI extends core.player.AI {
 
     private PieceColor selfColor = PieceColor.EMPTY;
     Board board = new Board();
-    private int selfValue;
-    private int opponentValue;
     private ArrayList<Road> selfRoads;
     private ArrayList<Road> opponentRoads;
 
@@ -55,24 +54,143 @@ public class AI extends core.player.AI {
         return null;
     }
 
-    private Move findThreatMove() {
-
-        return null;
-    }
-
     private Move findBestMove() {
-
+        // TODO
         return null;
     }
+
+    private Point onePoint;
+    private final int THTREE = 100;
+    private final int FOUR = 1000;
+    private final int FIVE = 100000;
+
+    private Move findThreatMove() {
+        int[] scores = new int[361];
+        initializeScores(board, scores);
+
+        int threatenLevel = evaluateThreatenLevel(opponentRoads, scores);
+
+        int[] topPositions = findTopPositions(scores);
+
+        if (threatenLevel == 2) {
+            Move move1 = new G09Move(topPositions[0] % 19, topPositions[0] / 19, topPositions[1] % 19, topPositions[1] / 19);
+            board.makeMove(move1);
+            return move1;
+        } else if (threatenLevel == 1 || threatenLevel == 0) {
+            onePoint = new Point(topPositions[0] % 19, topPositions[0] / 19);
+        }
+        return null;
+    }
+
+    private void initializeScores(Board board, int[] scores) {
+        for (int i = 0; i < 361; ++i) {
+            if (board.get(i % 19, i / 19) != PieceColor.EMPTY) scores[i] = -1;
+        }
+    }
+
+    private int evaluateThreatenLevel(ArrayList<Road> opponentRoads, int[] scores) {
+        int threatenLevel = -1;
+
+        for (Road road : opponentRoads) {
+            int stonesNum = road.stonesNum;
+
+            if (stonesNum == 3) {
+                threatenLevel = handleThreeStones(road, scores, threatenLevel);
+            } else if (stonesNum == 4) {
+                threatenLevel = handleFourStones(road, scores, threatenLevel);
+            } else if (stonesNum == 5) {
+                threatenLevel = handleFiveStones(road, scores, threatenLevel);
+            }
+        }
+        return threatenLevel;
+    }
+
+    private int handleThreeStones(Road opponentRoad, int[] scores, int threatenLevel) {
+        int[] positions = new int[3];
+        int p = 0;
+        for (int j = 0; j < 6; ++j) {
+            if (opponentRoad.roadColor[j] == PieceColor.EMPTY) {
+                positions[p] = opponentRoad.roadPosition[j].r * 19 + opponentRoad.roadPosition[j].c;
+                ++p;
+            }
+        }
+        Arrays.sort(positions);
+
+        scores[positions[2]] += THTREE;
+        if (threatenLevel == -1) threatenLevel = 0;
+        return threatenLevel;
+    }
+
+    private int handleFourStones(Road opponentRoad, int[] scores, int threatenLevel) {
+        int mid = (opponentRoad.roadPosition[2].r * 19 + opponentRoad.roadPosition[2].c + opponentRoad.roadPosition[1].r * 19 + opponentRoad.roadPosition[1].c) / 2;
+        int[] positions = new int[2];
+        int p = 0;
+        for (int j = 0; j < 6; ++j) {
+            if (opponentRoad.roadColor[j] == PieceColor.EMPTY) {
+                positions[p++] = opponentRoad.roadPosition[j].r * 19 + opponentRoad.roadPosition[j].c;
+            }
+        }
+        int tmp1 = positions[0] / 19 - positions[1] / 19;
+        int tmp2 = positions[0] % 19 - positions[1] % 19;
+        if (tmp1 * tmp1 + tmp2 * tmp2 < 50) {
+            if (threatenLevel == 0) threatenLevel = 1;
+            else if (threatenLevel == 1) threatenLevel = 2;
+            if ((positions[0] / 19 - mid / 19) * (positions[0] / 19 - mid / 19) + (positions[0] % 19 - mid % 19) * (positions[0] % 19 - mid % 19) < (positions[1] / 19 - mid / 19) * (positions[1] / 19 - mid / 19) + (positions[1] % 19 - mid % 19) * (positions[1] % 19 - mid % 19)) {
+                scores[positions[0]] += FOUR;
+            } else {
+                scores[positions[1]] += FOUR;
+            }
+        } else {
+            scores[positions[0]] += FOUR;
+            scores[positions[1]] += FOUR;
+            threatenLevel = 2;
+        }
+        return threatenLevel;
+    }
+
+    private int handleFiveStones(Road opponentRoad, int[] scores, int threatenLevel) {
+        if (threatenLevel == 0) threatenLevel = 1;
+        else if (threatenLevel == 1) threatenLevel = 2;
+        int postions = 0;
+        int p = 0;
+        for (int j = 0; j < 6; ++j) {
+            if (opponentRoad.roadColor[j] == PieceColor.EMPTY) {
+                postions = opponentRoad.roadPosition[j].r * 19 + opponentRoad.roadPosition[j].c;
+                break;
+            }
+        }
+        scores[postions] += FIVE;
+        return threatenLevel;
+    }
+
+
+    private int[] findTopPositions(int[] scores) {
+        int[] topPositions = new int[2];
+
+        for (int i = 0; i < 2; ++i) {
+            int max = -1;
+            for (int j = 0; j < scores.length; ++j) {
+                if (scores[j] > max) {
+                    max = scores[j];
+                    topPositions[i] = j;
+                }
+            }
+            scores[topPositions[i]] = -1;
+        }
+
+        return topPositions;
+    }
+
 
     private void setRoads() {
         HashMap<Integer, ArrayList<Road>> roads = generateRoads();
         int tmp1 = (int) roads.keySet().toArray()[0];
         int tmp2 = (int) roads.keySet().toArray()[1];
 
+        int selfValue;
         if (selfColor == PieceColor.WHITE) selfValue = tmp1 > 0 ? tmp1 : tmp2;
         else selfValue = tmp1 > 0 ? tmp2 : tmp1;
-        opponentValue = tmp1 + tmp2 - selfValue;
+        int opponentValue = tmp1 + tmp2 - selfValue;
 
         selfRoads = roads.get(selfValue);
         opponentRoads = roads.get(opponentValue);
@@ -113,8 +231,7 @@ public class AI extends core.player.AI {
                 }
                 do {
                     winPosition[1] = findRandomPosition();
-                }
-                while (winPosition[1].c == winPosition[0].c && winPosition[1].r == winPosition[0].r);
+                } while (winPosition[1].c == winPosition[0].c && winPosition[1].r == winPosition[0].r);
                 return new G09Move(winPosition[0].c, winPosition[0].r, winPosition[1].c, winPosition[1].r);
             }
         }
@@ -128,7 +245,7 @@ public class AI extends core.player.AI {
             index1 = rand.nextInt(361);
         } while (this.board.get(index1) == PieceColor.EMPTY);
 
-        return new Point(index1%19, index1/19);
+        return new Point(index1 % 19, index1 / 19);
     }
 
     /**
