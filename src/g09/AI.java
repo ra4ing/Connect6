@@ -9,8 +9,6 @@ import java.util.HashMap;
 import java.util.Random;
 
 public class AI extends core.player.AI {
-
-
     private PieceColor selfColor = PieceColor.EMPTY;
     Board board = new Board();
     private ArrayList<Road> selfRoads;
@@ -25,11 +23,13 @@ public class AI extends core.player.AI {
      * @return 己方移动决策
      */
     @Override
-    public core.game.Move findMove(Move opponentMove) throws Exception {
-        Move move = findFirstMove(opponentMove);
+    public Move findMove(Move opponentMove) throws Exception {
+        Move move = findFirstMove();
         if (move != null) {
+            this.board.makeMove(move);
             return move;
         }
+        board.makeMove(opponentMove);
 
         // 扫描全局生成黑白两方的路
         setRoads();
@@ -38,31 +38,91 @@ public class AI extends core.player.AI {
         move = findWinMove(selfRoads);
         if (move != null) {
             this.board.makeMove(move);
+            return move;
         }
 
         // 威胁处理
         move = findThreatMove();
         if (move != null) {
             this.board.makeMove(move);
+            return move;
         }
 
         // 博弈树搜索
+        if (onePoint != null) {
+
+        } else {
+
+        }
+
         move = findBestMove();
         if (move != null) {
             this.board.makeMove(move);
+            return move;
         }
         return null;
     }
 
+    private final int maxDepth = 3;
+    private Move bestMove = null;
+
     private Move findBestMove() {
-        // TODO
-        return null;
+        alphaBeta(-Integer.MAX_VALUE, Integer.MAX_VALUE, maxDepth);
+        return bestMove;
     }
 
-    private Point onePoint;
-    private final int THTREE = 100;
-    private final int FOUR = 1000;
-    private final int FIVE = 100000;
+    private int alphaBeta(int alpha, int beta, int depth) {
+        int walkValue, bestValue = -Integer.MAX_VALUE;
+        if (depth == 0 || this.board.gameOver()) {
+            return evaluate();
+        }
+
+        ArrayList<Move> moves = generateMove(depth);
+        for (Move move : moves) {
+            board.makeMove(move);
+            walkValue = -alphaBeta(-beta, -alpha, depth - 1);
+            board.undo();
+            if (walkValue > bestValue) {
+                bestValue = walkValue;
+                if (bestValue > alpha) {
+                    alpha = bestValue;
+                }
+                if (bestValue > beta) break;
+            }
+
+            if (depth == maxDepth && walkValue >= bestValue) bestMove = move;
+        }
+
+        return bestValue;
+    }
+
+    private ArrayList<Move> generateMove(int depth) {
+        ArrayList<Move> moves = new ArrayList<>();
+
+
+
+        return moves;
+    }
+
+    private int evaluate() {
+        HashMap<Integer, ArrayList<Road>> roads = generateRoads();
+        int whiteValue = (int) roads.keySet().toArray()[0];
+        int blackValue = (int) roads.keySet().toArray()[1];
+
+        if (whiteValue < 0) {
+            int t = whiteValue;
+            whiteValue = blackValue;
+            blackValue = t;
+        }
+        blackValue = -blackValue;
+
+        int selfValue = (board.whoseMove() == PieceColor.WHITE ? whiteValue : blackValue);
+        int opponentValue = whiteValue + blackValue - selfValue;
+
+        return selfValue - opponentValue;
+    }
+
+    private Point onePoint = null;
 
     private Move findThreatMove() {
         int[] scores = new int[361];
@@ -73,9 +133,7 @@ public class AI extends core.player.AI {
         int[] topPositions = findTopPositions(scores);
 
         if (threatenLevel == 2) {
-            Move move1 = new G09Move(topPositions[0] % 19, topPositions[0] / 19, topPositions[1] % 19, topPositions[1] / 19);
-            board.makeMove(move1);
-            return move1;
+            return new G09Move(topPositions[0] % 19, topPositions[0] / 19, topPositions[1] % 19, topPositions[1] / 19);
         } else if (threatenLevel == 1 || threatenLevel == 0) {
             onePoint = new Point(topPositions[0] % 19, topPositions[0] / 19);
         }
@@ -107,16 +165,15 @@ public class AI extends core.player.AI {
 
     private int handleThreeStones(Road opponentRoad, int[] scores, int threatenLevel) {
         int[] positions = new int[3];
-        int p = 0;
-        for (int j = 0; j < 6; ++j) {
-            if (opponentRoad.roadColor[j] == PieceColor.EMPTY) {
-                positions[p] = opponentRoad.roadPosition[j].r * 19 + opponentRoad.roadPosition[j].c;
-                ++p;
+        for (int i = 0, cnt = 0; i < 6; ++i) {
+            if (opponentRoad.roadColor[i] == PieceColor.EMPTY) {
+                positions[cnt++] = opponentRoad.roadPosition[i].r * 19 + opponentRoad.roadPosition[i].c;
             }
         }
         Arrays.sort(positions);
 
-        scores[positions[2]] += THTREE;
+        int THREE = 100;
+        scores[positions[2]] += THREE;
         if (threatenLevel == -1) threatenLevel = 0;
         return threatenLevel;
     }
@@ -124,18 +181,17 @@ public class AI extends core.player.AI {
     private int handleFourStones(Road opponentRoad, int[] scores, int threatenLevel) {
         int mid = (opponentRoad.roadPosition[2].r * 19 + opponentRoad.roadPosition[2].c + opponentRoad.roadPosition[1].r * 19 + opponentRoad.roadPosition[1].c) / 2;
         int[] positions = new int[2];
-        int p = 0;
-        for (int j = 0; j < 6; ++j) {
-            if (opponentRoad.roadColor[j] == PieceColor.EMPTY) {
-                positions[p++] = opponentRoad.roadPosition[j].r * 19 + opponentRoad.roadPosition[j].c;
+        for (int i = 0, idx = 0; i < 6 && idx < 2; ++i) {
+            if (opponentRoad.roadColor[i] == PieceColor.EMPTY) {
+                positions[idx++] = opponentRoad.roadPosition[i].r * 19 + opponentRoad.roadPosition[i].c;
             }
         }
-        int tmp1 = positions[0] / 19 - positions[1] / 19;
-        int tmp2 = positions[0] % 19 - positions[1] % 19;
-        if (tmp1 * tmp1 + tmp2 * tmp2 < 50) {
-            if (threatenLevel == 0) threatenLevel = 1;
-            else if (threatenLevel == 1) threatenLevel = 2;
-            if ((positions[0] / 19 - mid / 19) * (positions[0] / 19 - mid / 19) + (positions[0] % 19 - mid % 19) * (positions[0] % 19 - mid % 19) < (positions[1] / 19 - mid / 19) * (positions[1] / 19 - mid / 19) + (positions[1] % 19 - mid % 19) * (positions[1] % 19 - mid % 19)) {
+
+        int FOUR = 1000;
+        if (euclid(positions[0], positions[1], 0) + euclid(positions[0], positions[1], 1) < 50) {
+            if (threatenLevel <= 1) threatenLevel++;
+
+            if (euclid(positions[0], mid, 0) + euclid(positions[0], mid, 1) < euclid(positions[1], mid, 0) + euclid(positions[0], mid, 1)) {
                 scores[positions[0]] += FOUR;
             } else {
                 scores[positions[1]] += FOUR;
@@ -148,17 +204,28 @@ public class AI extends core.player.AI {
         return threatenLevel;
     }
 
+    private int euclid(int a, int b, int flag) {
+        if (flag == 0) {
+            a /= 19;
+            b /= 19;
+        } else {
+            a %= 19;
+            b %= 19;
+        }
+        return (a - b) * (a - b);
+    }
+
     private int handleFiveStones(Road opponentRoad, int[] scores, int threatenLevel) {
         if (threatenLevel == 0) threatenLevel = 1;
         else if (threatenLevel == 1) threatenLevel = 2;
         int postions = 0;
-        int p = 0;
         for (int j = 0; j < 6; ++j) {
             if (opponentRoad.roadColor[j] == PieceColor.EMPTY) {
                 postions = opponentRoad.roadPosition[j].r * 19 + opponentRoad.roadPosition[j].c;
                 break;
             }
         }
+        int FIVE = 100000;
         scores[postions] += FIVE;
         return threatenLevel;
     }
@@ -168,10 +235,10 @@ public class AI extends core.player.AI {
         int[] topPositions = new int[2];
 
         for (int i = 0; i < 2; ++i) {
-            int max = -1;
+            int maxScore = -1;
             for (int j = 0; j < scores.length; ++j) {
-                if (scores[j] > max) {
-                    max = scores[j];
+                if (scores[j] > maxScore) {
+                    maxScore = scores[j];
                     topPositions[i] = j;
                 }
             }
@@ -184,29 +251,31 @@ public class AI extends core.player.AI {
 
     private void setRoads() {
         HashMap<Integer, ArrayList<Road>> roads = generateRoads();
-        int tmp1 = (int) roads.keySet().toArray()[0];
-        int tmp2 = (int) roads.keySet().toArray()[1];
+        int greater = (int) roads.keySet().toArray()[0];
+        int smaller = (int) roads.keySet().toArray()[1];
 
-        int selfValue;
-        if (selfColor == PieceColor.WHITE) selfValue = tmp1 > 0 ? tmp1 : tmp2;
-        else selfValue = tmp1 > 0 ? tmp2 : tmp1;
-        int opponentValue = tmp1 + tmp2 - selfValue;
+        if (greater < 0) {
+            int t = greater;
+            greater = smaller;
+            smaller = t;
+        }
+
+        int selfValue = (board.whoseMove() == PieceColor.WHITE ? greater : smaller);
+        int opponentValue = greater + smaller - selfValue;
 
         selfRoads = roads.get(selfValue);
         opponentRoads = roads.get(opponentValue);
     }
 
-    private Move findFirstMove(Move opponentMove) {
+    private Move findFirstMove() {
+        Move move = null;
         if (selfColor == PieceColor.EMPTY) { // 黑先
             selfColor = PieceColor.BLACK;
-            G09Move move = (G09Move) firstMove();
-            this.board.makeMove(move);
-            return move;
+            move = firstMove();
         } else {
             selfColor = PieceColor.WHITE;
         }
-        board.makeMove(opponentMove);
-        return null;
+        return move;
     }
 
     private Move findWinMove(ArrayList<Road> selfRoad) {
@@ -221,7 +290,7 @@ public class AI extends core.player.AI {
                         ++idx;
                     }
                 }
-                return new G09Move(winPosition[0].c, winPosition[0].r, winPosition[1].c, winPosition[1].r);
+                return new G09Move(winPosition[0], winPosition[1]);
             } else if (road.stonesNum == 5) {
                 for (int j = 0; j < 6; ++j) {
                     if (road.roadColor[j] == PieceColor.EMPTY) {
@@ -232,7 +301,7 @@ public class AI extends core.player.AI {
                 do {
                     winPosition[1] = findRandomPosition();
                 } while (winPosition[1].c == winPosition[0].c && winPosition[1].r == winPosition[0].r);
-                return new G09Move(winPosition[0].c, winPosition[0].r, winPosition[1].c, winPosition[1].r);
+                return new G09Move(winPosition[0], winPosition[1]);
             }
         }
         return null;
