@@ -95,7 +95,7 @@ public class Move {
         return _index0 == m._index0 && _index1 == m._index1;
     }
 
-    /** Return the Move denoted by STR. */
+    /** Return the G09Move denoted by STR. */
     public static Move parseMove(String str) {
         return new Move(str.charAt(0), str.charAt(1), str.charAt(2), str.charAt(3));
     }

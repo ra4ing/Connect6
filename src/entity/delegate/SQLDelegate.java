@@ -61,7 +61,7 @@ public class SQLDelegate extends Player implements Observer {
 	/*
 	 * (non-Javadoc)
 	 * 
-	 * @see core.player.Player#findMove(core.game.Move)
+	 * @see core.player.Player#findMove(core.game.G09Move)
 	 */
 	@Override
 	public Move findMove(Move opponentMove) throws Exception {

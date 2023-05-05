@@ -54,7 +54,7 @@ public class SocketDelegate extends Player implements Observer{
 	}
 
 	/* (non-Javadoc)
-	 * @see core.player.Player#findMove(core.game.Move)
+	 * @see core.player.Player#findMove(core.game.G09Move)
 	 */
 	@Override
 	public Move findMove(Move opponentMove) {//∑¢ÀÕplaychess√¸¡Ó
@@ -71,7 +71,7 @@ public class SocketDelegate extends Player implements Observer{
 
 	public void sendMove(Move currentMove) {
 		// TODO Auto-generated method stub
-		out.println("Move@" + currentMove);
+		out.println("G09Move@" + currentMove);
 		out.flush();
 	}
 
@@ -83,7 +83,7 @@ public class SocketDelegate extends Player implements Observer{
 		// TODO Auto-generated method stub
 		StringTokenizer stringTokenizer = new StringTokenizer((String)arg, "@");
 		String flag = stringTokenizer.nextToken(); // ±Í ∂∑˚
-		if(flag.equals("Move")){
+		if(flag.equals("G09Move")){
 			this.moveStr=stringTokenizer.nextToken();
 		}
 	}
