@@ -12,6 +12,10 @@ public class AI extends core.player.AI {
 
     private PieceColor selfColor = PieceColor.EMPTY;
     Board board = new Board();
+    private int selfValue;
+    private int opponentValue;
+    private ArrayList<Road> selfRoads;
+    private ArrayList<Road> opponentRoads;
 
     /**
      * Return a legal move for me according to my opponent's move, and at that
@@ -23,6 +27,58 @@ public class AI extends core.player.AI {
      */
     @Override
     public core.game.Move findMove(Move opponentMove) throws Exception {
+        Move move = findFirstMove(opponentMove);
+        if (move != null) {
+            return move;
+        }
+
+        // 扫描全局生成黑白两方的路
+        setRoads();
+
+        // 寻找胜着
+        move = findWinMove(selfRoads);
+        if (move != null) {
+            this.board.makeMove(move);
+        }
+
+        // 威胁处理
+        move = findThreatMove();
+        if (move != null) {
+            this.board.makeMove(move);
+        }
+
+        // 博弈树搜索
+        move = findBestMove();
+        if (move != null) {
+            this.board.makeMove(move);
+        }
+        return null;
+    }
+
+    private Move findThreatMove() {
+
+        return null;
+    }
+
+    private Move findBestMove() {
+
+        return null;
+    }
+
+    private void setRoads() {
+        HashMap<Integer, ArrayList<Road>> roads = generateRoads();
+        int tmp1 = (int) roads.keySet().toArray()[0];
+        int tmp2 = (int) roads.keySet().toArray()[1];
+
+        if (selfColor == PieceColor.WHITE) selfValue = tmp1 > 0 ? tmp1 : tmp2;
+        else selfValue = tmp1 > 0 ? tmp2 : tmp1;
+        opponentValue = tmp1 + tmp2 - selfValue;
+
+        selfRoads = roads.get(selfValue);
+        opponentRoads = roads.get(opponentValue);
+    }
+
+    private Move findFirstMove(Move opponentMove) {
         if (selfColor == PieceColor.EMPTY) { // 黑先
             selfColor = PieceColor.BLACK;
             G09Move move = (G09Move) firstMove();
@@ -32,32 +88,10 @@ public class AI extends core.player.AI {
             selfColor = PieceColor.WHITE;
         }
         board.makeMove(opponentMove);
-
-        // 扫描全局生成黑白两方的路
-        HashMap<Integer, ArrayList<Road>> roads = generateRoad();
-        int tmp1 = (int) roads.keySet().toArray()[0];
-        int tmp2 = (int) roads.keySet().toArray()[1];
-        int selfValue;
-        int opponentValue;
-
-        if (selfColor == PieceColor.WHITE) selfValue = tmp1 > 0 ? tmp1 : tmp2;
-        else selfValue = tmp1 > 0 ? tmp2 : tmp1;
-        opponentValue = tmp1 + tmp2 - selfValue;
-
-        ArrayList<Road> selfRoad = roads.get(selfValue);
-        ArrayList<Road> opponentRoad = roads.get(opponentValue);
-
-        // 寻找胜着
-        G09Move move = findWinMove(selfRoad);
-        if (move != null) {
-            this.board.makeMove(move);
-        }
-
-        //
         return null;
     }
 
-    private G09Move findWinMove(ArrayList<Road> selfRoad) {
+    private Move findWinMove(ArrayList<Road> selfRoad) {
         for (Road road : selfRoad) {
             Point[] winPosition = new Point[2];
             if (road.stonesNum == 4) {
@@ -103,7 +137,7 @@ public class AI extends core.player.AI {
      *
      * @return 白子与黑子的评估值及其所有路组成的数组
      */
-    public HashMap<Integer, ArrayList<Road>> generateRoad() {
+    public HashMap<Integer, ArrayList<Road>> generateRoads() {
         HashMap<Integer, ArrayList<Road>> list = new HashMap<>();
         int[] scores = {14, 66, 153, 790, 844, 100000};
         int whiteValue = 0;
