@@ -18,14 +18,16 @@ public class AI extends core.player.AI {
     G10Board board = new G10Board();
     private ArrayList<Road> selfRoads;
     private ArrayList<Road> opponentRoads;
+    public int[] add = new int[]{1, 10, 100, 1000, 10000};
+    public int[] scores = {14, 66, 153, 790, 844, 100000};
 
     /**
      * Return a legal move for me according to my opponent's move, and at that
      * moment, I am facing a board after the opponent's move. Abstract method to be
      * implemented by subclasses.
      *
-     * @param opponentMove �Է��ƶ�����
-     * @return �����ƶ�����
+     * @param opponentMove ??????????
+     * @return ???????????
      */
     @Override
     public Move findMove(Move opponentMove) {
@@ -36,24 +38,24 @@ public class AI extends core.player.AI {
         }
         board.makeMove(opponentMove);
 
-        // ɨ��ȫ�����ɺڰ�������·
+        // ??????????????????·
         setRoads();
 
-        // Ѱ��ʤ��
+        // ??????
         move = findWinMove();
         if (move != null) {
             this.board.makeMove(move);
             return move;
         }
 
-        // ��в���� ������onePoint��ָ������ֻ��һ�����ӷ��أ�
+        // ??в???? ??????onePoint???????????????????????
         move = findThreatMove();
         if (move != null) {
             this.board.makeMove(move);
             return move;
         }
 
-        // ���������� ������onePoint�� ���������Ѱ��·����
+        // ?????????? ??????onePoint?? ????????????·????
         move = findBestMove();
         this.board.makeMove(move);
         return move;
@@ -137,6 +139,7 @@ public class AI extends core.player.AI {
         return moves;
     }
 
+
     private ArrayList<Point> generatePoint(int num) {
         ArrayList<Point> points = new ArrayList<>();
         if (this.board.gameOver()) {
@@ -149,8 +152,8 @@ public class AI extends core.player.AI {
         int selfValue = values.getKey();
         ArrayList<Road> selfR = roads.get(selfValue);
 
-        //������������
-        int[] add = new int[]{1, 10, 100, 1000, 10000};
+        //????????????
+
         int[] scores = new int[361];
         for (int i = 0; i < 361; ++i) {
             scores[i] = 0;
@@ -165,7 +168,7 @@ public class AI extends core.player.AI {
                 }
             }
         }
-        //ȡ�÷�����num����
+        //??÷?????num????
         int[] positions = new int[num];
         int maxScore;
         for (int j = 0; j < num; ++j) {
@@ -351,7 +354,7 @@ public class AI extends core.player.AI {
     private Move findFirstMove(Move opponentMove) {
         Move move = null;
         if (opponentMove == null) {
-            if (selfColor == PieceColor.EMPTY) selfColor = PieceColor.BLACK; //����
+            if (selfColor == PieceColor.EMPTY) selfColor = PieceColor.BLACK; //????
             move = this.firstMove();
         } else {
             if (selfColor == PieceColor.EMPTY) selfColor = PieceColor.WHITE;
@@ -398,21 +401,23 @@ public class AI extends core.player.AI {
     }
 
     /**
-     * �������̵�ÿ�����ÿ�������ҵ����е�·�����������ӵ�������
-     * �����ӵ�����ֵ����Ϊ�����������ӵ�����ֵ����Ϊ��ֵ��
+     * ????????????????????????????е?·???????????????????
+     * ?????????????????????????????????????????????
      *
-     * @return ��������ӵ�����ֵ��������·��ɵ�����
+     * @return ???????????????????????·????????
      */
+
+
     public HashMap<Integer, ArrayList<Road>> generateRoads() {
         HashMap<Integer, ArrayList<Road>> list = new HashMap<>();
-        int[] scores = {14, 66, 153, 790, 844, 100000};
+
         int blackValue = 0;
         int whiteValue = 0;
         ArrayList<Road> blackRoads = new ArrayList<>();
         ArrayList<Road> whiteRoads = new ArrayList<>();
         for (int col = 0; col < 19; ++col) {
             for (int row = 0; row < 19; ++row) {
-                //�����ĸ����� ���� ���� ���Խ����� ���Խ����� , ��ȡ���������·����
+                //??????????? ???? ???? ????????? ????????? , ????????????·????
                 for (int d = 0; d < 4; ++d) {
                     PieceColor[] roadColor = new PieceColor[6];
                     Point[] roadPosition = new Point[6];
@@ -475,7 +480,7 @@ public class AI extends core.player.AI {
     }
 
     /**
-     * @return ��������
+     * @return ????????
      */
     @Override
     public String name() {

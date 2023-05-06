@@ -15,6 +15,7 @@ import static java.lang.Math.max;
 
 public class AI extends core.player.AI {
     private PieceColor selfColor = PieceColor.EMPTY;
+    private final int maxDepth = 1;
     G09Board board = new G09Board();
     private ArrayList<Road> selfRoads;
     private ArrayList<Road> opponentRoads;
@@ -59,27 +60,7 @@ public class AI extends core.player.AI {
         return move;
     }
 
-    private Move randomMove() {
-        Move move = null;
-        while (move == null) {
-            move = randomMove(0, 0, 19, 19);
-        }
-        return move;
-    }
 
-    private Move randomMove(int startX, int startY, int width, int height) {
-        Random rand = new Random();
-        int index1 = 19 * (rand.nextInt(width) + startX) + (rand.nextInt(height) + startY);
-        int index2 = 19 * (rand.nextInt(width) + startX) + (rand.nextInt(height) + startY);
-//        System.out.println(index1 + "    " + index2);
-        if (index1 != index2 && this.board.get(index1) == PieceColor.EMPTY && this.board.get(index2) == PieceColor.EMPTY) {
-            return new Move(index1, index2);
-        } else {
-            return null;
-        }
-    }
-
-    private final int maxDepth = 1;
     private Move bestMove = null;
 
     private Move findBestMove() {
@@ -488,8 +469,4 @@ public class AI extends core.player.AI {
         board = new G09Board();
     }
 
-    public static void main(String[] args) throws Exception {
-        AI ai = new AI();
-        ai.findMove(new Move(1, 2));
-    }
 }
