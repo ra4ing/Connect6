@@ -1,11 +1,11 @@
-package g09;
+package g10;
 
 import core.board.PieceColor;
 import core.game.Move;
 
 
-public class G09Board extends core.board.Board {
-    String s="ABCDEFGHIJKLMNOPQRS";//Ë÷ÒýÆåÅÌ
+public class G10Board extends core.board.Board {
+    String s="ABCDEFGHIJKLMNOPQRS";//ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
 
 
     public PieceColor get(int c, int r) {

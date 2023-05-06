@@ -1,4 +1,4 @@
-package g09;
+package g10;
 
 import core.board.PieceColor;
 import core.game.Game;
@@ -15,7 +15,7 @@ import static java.lang.Math.max;
 
 public class AI extends core.player.AI {
     private PieceColor selfColor = PieceColor.EMPTY;
-    G09Board board = new G09Board();
+    G10Board board = new G10Board();
     private ArrayList<Road> selfRoads;
     private ArrayList<Road> opponentRoads;
 
@@ -24,8 +24,8 @@ public class AI extends core.player.AI {
      * moment, I am facing a board after the opponent's move. Abstract method to be
      * implemented by subclasses.
      *
-     * @param opponentMove ¶Ô·½ÒÆ¶¯¾ö²ß
-     * @return ¼º·½ÒÆ¶¯¾ö²ß
+     * @param opponentMove ï¿½Ô·ï¿½ï¿½Æ¶ï¿½ï¿½ï¿½ï¿½ï¿½
+     * @return ï¿½ï¿½ï¿½ï¿½ï¿½Æ¶ï¿½ï¿½ï¿½ï¿½ï¿½
      */
     @Override
     public Move findMove(Move opponentMove) {
@@ -36,24 +36,24 @@ public class AI extends core.player.AI {
         }
         board.makeMove(opponentMove);
 
-        // É¨ÃèÈ«¾ÖÉú³ÉºÚ°×Á½·½µÄÂ·
+        // É¨ï¿½ï¿½È«ï¿½ï¿½ï¿½ï¿½ï¿½ÉºÚ°ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Â·
         setRoads();
 
-        // Ñ°ÕÒÊ¤×Å
+        // Ñ°ï¿½ï¿½Ê¤ï¿½ï¿½
         move = findWinMove();
         if (move != null) {
             this.board.makeMove(move);
             return move;
         }
 
-        // ÍþÐ²´¦Àí £¨Éú³ÉonePoint£¬Ö¸´úÕâÀïÖ»ÓÃÒ»¸öÆå×Ó·ÀÊØ£©
+        // ï¿½ï¿½Ð²ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½onePointï¿½ï¿½Ö¸ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ö»ï¿½ï¿½Ò»ï¿½ï¿½ï¿½ï¿½ï¿½Ó·ï¿½ï¿½Ø£ï¿½
         move = findThreatMove();
         if (move != null) {
             this.board.makeMove(move);
             return move;
         }
 
-        // ²©ÞÄÊ÷ËÑË÷ £¨ÀûÓÃonePoint£¬ ·ÖÁ½ÖÖÇé¿öÑ°ÕÒÂ·¾¶£©
+        // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½onePointï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ñ°ï¿½ï¿½Â·ï¿½ï¿½ï¿½ï¿½
         move = findBestMove();
         this.board.makeMove(move);
         return move;
@@ -119,7 +119,7 @@ public class AI extends core.player.AI {
             this.board.unMakeOneMove(onePoint.c, onePoint.r);
 
             for (Point p : points) {
-                moves.add(new G09Move(onePoint.c, onePoint.r, p.c, p.r));
+                moves.add(new G10Move(onePoint.c, onePoint.r, p.c, p.r));
             }
             onePoint = null;
         } else {
@@ -129,7 +129,7 @@ public class AI extends core.player.AI {
                 ArrayList<Point> points2 = generatePoint(7);
                 this.board.unMakeOneMove(p1.c, p1.r);
                 for (Point p2 : points2) {
-                    moves.add(new G09Move(p1.c, p1.r, p2.c, p2.r));
+                    moves.add(new G10Move(p1.c, p1.r, p2.c, p2.r));
                 }
             }
 
@@ -149,7 +149,7 @@ public class AI extends core.player.AI {
         int selfValue = values.getKey();
         ArrayList<Road> selfR = roads.get(selfValue);
 
-        //¸ø³öÆÀ·ÖÆåÅÌ
+        //ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
         int[] add = new int[]{1, 10, 100, 1000, 10000};
         int[] scores = new int[361];
         for (int i = 0; i < 361; ++i) {
@@ -165,7 +165,7 @@ public class AI extends core.player.AI {
                 }
             }
         }
-        //È¡µÃ·Ö×î´óµÄnum¸öµã
+        //È¡ï¿½Ã·ï¿½ï¿½ï¿½ï¿½ï¿½numï¿½ï¿½ï¿½ï¿½
         int[] positions = new int[num];
         int maxScore;
         for (int j = 0; j < num; ++j) {
@@ -210,14 +210,14 @@ public class AI extends core.player.AI {
         int[] topPositions = findTopPositions(scores);
 
         if (threatenLevel == 2) {
-            return new G09Move(topPositions[0] % 19, topPositions[0] / 19, topPositions[1] % 19, topPositions[1] / 19);
+            return new G10Move(topPositions[0] % 19, topPositions[0] / 19, topPositions[1] % 19, topPositions[1] / 19);
         } else if (threatenLevel == 1 || threatenLevel == 0) {
             onePoint = new Point(topPositions[0] % 19, topPositions[0] / 19);
         }
         return null;
     }
 
-    private void initializeScores(G09Board board, int[] scores) {
+    private void initializeScores(G10Board board, int[] scores) {
         for (int i = 0; i < 361; ++i) {
             if (board.get(i % 19, i / 19) != PieceColor.EMPTY) scores[i] = -1;
         }
@@ -351,7 +351,7 @@ public class AI extends core.player.AI {
     private Move findFirstMove(Move opponentMove) {
         Move move = null;
         if (opponentMove == null) {
-            if (selfColor == PieceColor.EMPTY) selfColor = PieceColor.BLACK; //ºÚÏÈ
+            if (selfColor == PieceColor.EMPTY) selfColor = PieceColor.BLACK; //ï¿½ï¿½ï¿½ï¿½
             move = this.firstMove();
         } else {
             if (selfColor == PieceColor.EMPTY) selfColor = PieceColor.WHITE;
@@ -370,7 +370,7 @@ public class AI extends core.player.AI {
                         ++idx;
                     }
                 }
-                return new G09Move(winPosition[0], winPosition[1]);
+                return new G10Move(winPosition[0], winPosition[1]);
             } else if (road.stonesNum == 5) {
                 for (int j = 0; j < 6; ++j) {
                     if (road.roadColor[j] == PieceColor.EMPTY) {
@@ -381,7 +381,7 @@ public class AI extends core.player.AI {
                 do {
                     winPosition[1] = generateRandomPosition();
                 } while (winPosition[1].c == winPosition[0].c && winPosition[1].r == winPosition[0].r);
-                return new G09Move(winPosition[0], winPosition[1]);
+                return new G10Move(winPosition[0], winPosition[1]);
             }
         }
         return null;
@@ -398,10 +398,10 @@ public class AI extends core.player.AI {
     }
 
     /**
-     * ±éÀúÆåÅÌµÄÃ¿¸öµãµÄÃ¿¸ö·½Ïò£¬ÕÒµ½ËùÓÐµÄÂ·²¢¼ÆËãÆäÆå×ÓµÄÊýÁ¿¡£
-     * ½«°××ÓµÄÆÀ¹ÀÖµ´¢´æÎªÕýÊý£¬½«ºÚ×ÓµÄÆÀ¹ÀÖµ´¢´æÎª¸ºÖµ¡£
+     * ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ìµï¿½Ã¿ï¿½ï¿½ï¿½ï¿½ï¿½Ã¿ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Òµï¿½ï¿½ï¿½ï¿½Ðµï¿½Â·ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Óµï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
+     * ï¿½ï¿½ï¿½ï¿½ï¿½Óµï¿½ï¿½ï¿½ï¿½ï¿½Öµï¿½ï¿½ï¿½ï¿½Îªï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Óµï¿½ï¿½ï¿½ï¿½ï¿½Öµï¿½ï¿½ï¿½ï¿½Îªï¿½ï¿½Öµï¿½ï¿½
      *
-     * @return °××ÓÓëºÚ×ÓµÄÆÀ¹ÀÖµ¼°ÆäËùÓÐÂ·×é³ÉµÄÊý×é
+     * @return ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Óµï¿½ï¿½ï¿½ï¿½ï¿½Öµï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Â·ï¿½ï¿½Éµï¿½ï¿½ï¿½ï¿½ï¿½
      */
     public HashMap<Integer, ArrayList<Road>> generateRoads() {
         HashMap<Integer, ArrayList<Road>> list = new HashMap<>();
@@ -412,7 +412,7 @@ public class AI extends core.player.AI {
         ArrayList<Road> whiteRoads = new ArrayList<>();
         for (int col = 0; col < 19; ++col) {
             for (int row = 0; row < 19; ++row) {
-                //±éÀúËÄ¸ö·½Ïò ÐÐÏò ÁÐÏò Ö÷¶Ô½ÇÏßÏò ¸±¶Ô½ÇÏßÏò , »ñÈ¡¸÷¸ö·½ÏòµÄÂ·ÐòÁÐ
+                //ï¿½ï¿½ï¿½ï¿½ï¿½Ä¸ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½Ô½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½Ô½ï¿½ï¿½ï¿½ï¿½ï¿½ , ï¿½ï¿½È¡ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Â·ï¿½ï¿½ï¿½ï¿½
                 for (int d = 0; d < 4; ++d) {
                     PieceColor[] roadColor = new PieceColor[6];
                     Point[] roadPosition = new Point[6];
@@ -475,17 +475,17 @@ public class AI extends core.player.AI {
     }
 
     /**
-     * @return ·µ»ØÃû×Ö
+     * @return ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
      */
     @Override
     public String name() {
-        return "g09";
+        return "g10";
     }
 
     @Override
     public void playGame(Game game) {
         super.playGame(game);
-        board = new G09Board();
+        board = new G10Board();
     }
 
     public static void main(String[] args) throws Exception {
