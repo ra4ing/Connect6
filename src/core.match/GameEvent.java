@@ -154,11 +154,12 @@ public class GameEvent {
 
     public static void main(String[] args) {
         GameEvent event = new GameEvent("Report01");
-        event.addPlayer(new method_1.AI());
+        event.addPlayer(new method_3.AI());
         event.addPlayer(new g09.AI());
+//        event.addPlayer(new g08.AI());
         event.arrangeMatches(500);
         event.runSingleThread();
-        event.showResults();
+//        event.showResults();
         event.showStatistics();
     }
 }

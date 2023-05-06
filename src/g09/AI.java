@@ -1,6 +1,7 @@
 package g09;
 
 import core.board.PieceColor;
+import core.game.Game;
 import core.game.Move;
 
 import java.util.ArrayList;
@@ -28,16 +29,18 @@ public class AI extends core.player.AI {
      * @return 己方移动决策
      */
     @Override
-    public Move findMove(Move opponentMove) throws Exception {
-        Move move = findFirstMove();
+    public Move findMove(Move opponentMove) {
+        Move move = findFirstMove(opponentMove);
         if (move != null) {
             this.board.makeMove(move);
             return move;
         }
+
         board.makeMove(opponentMove);
 
         // 扫描全局生成黑白两方的路
         setRoads();
+
 
         // 寻找胜着
         move = findWinMove(selfRoads);
@@ -59,10 +62,34 @@ public class AI extends core.player.AI {
             this.board.makeMove(move);
             return move;
         }
-        return null;
+//
+//        return null;
+        move = randomMove();
+        this.board.makeMove(move);
+        return move;
     }
 
-    private final int maxDepth = 3;
+    private Move randomMove() {
+        Move move = null;
+        while (move == null) {
+            move = randomMove(0, 0, 19, 19);
+        }
+        return move;
+    }
+
+    private Move randomMove(int startX, int startY, int width, int height) {
+        Random rand = new Random();
+        int index1 = 19 * (rand.nextInt(width) + startX) + (rand.nextInt(height) + startY);
+        int index2 = 19 * (rand.nextInt(width) + startX) + (rand.nextInt(height) + startY);
+//        System.out.println(index1 + "    " + index2);
+        if (index1 != index2 && this.board.get(index1) == PieceColor.EMPTY && this.board.get(index2) == PieceColor.EMPTY) {
+            return new Move(index1, index2);
+        } else {
+            return null;
+        }
+    }
+
+    private final int maxDepth = 1;
     private Move bestMove = null;
 
     private Move findBestMove() {
@@ -96,29 +123,30 @@ public class AI extends core.player.AI {
     }
 
     private ArrayList<Move> generateMove(int depth) {
-        ArrayList<Move> moves = new ArrayList<>();
         if (depth == maxDepth && onePoint != null) {
-
+            ArrayList<Move> moves = new ArrayList<>();
             this.board.makeOneMove(onePoint.c, onePoint.r, board.whoseMove());
             ArrayList<Point> points = generatePoint(20);
             this.board.unMakeOneMove(onePoint.c, onePoint.r);
 
             for (Point p : points) {
-                moves.add(new Move(col(onePoint.c), row(onePoint.r), col(p.c), row(p.r)));
+                moves.add(new G09Move(onePoint.c, onePoint.r, p.c, p.r));
             }
             onePoint = null;
+            return moves;
         } else {
+            ArrayList<Move> moves = new ArrayList<>();
             ArrayList<Point> points1 = generatePoint(7);
             for (Point p1 : points1) {
                 this.board.makeOneMove(p1.c, p1.r, board.whoseMove());
                 ArrayList<Point> points2 = generatePoint(7);
                 this.board.unMakeOneMove(p1.c, p1.r);
                 for (Point p2 : points2) {
-                    moves.add(new Move(col(onePoint.c), row(onePoint.r), col(p2.c), row(p2.r)));
+                    moves.add(new G09Move(p1.c, p1.r, p2.c, p2.r));
                 }
             }
+            return moves;
         }
-        return moves;
     }
 
     private ArrayList<Point> generatePoint(int num) {
@@ -312,13 +340,11 @@ public class AI extends core.player.AI {
     private Pair<Integer, Integer> getSelfAndOpponentValues(HashMap<Integer, ArrayList<Road>> roads) {
         int whiteValue = (int) roads.keySet().toArray()[0];
         int blackValue = (int) roads.keySet().toArray()[1];
-
         if (whiteValue < 0) {
             int t = whiteValue;
             whiteValue = blackValue;
             blackValue = t;
         }
-
         int selfValue = (board.whoseMove() == PieceColor.WHITE ? whiteValue : blackValue);
         int opponentValue = whiteValue + blackValue - selfValue;
 
@@ -326,13 +352,13 @@ public class AI extends core.player.AI {
     }
 
 
-    private Move findFirstMove() {
+    private Move findFirstMove(Move opponentMove) {
         Move move = null;
-        if (selfColor == PieceColor.EMPTY) { // 黑先
-            selfColor = PieceColor.BLACK;
-            move = firstMove();
+        if (opponentMove == null) {
+            if (selfColor == PieceColor.EMPTY) selfColor = PieceColor.BLACK; //黑先
+            move = this.firstMove();
         } else {
-            selfColor = PieceColor.WHITE;
+            if (selfColor == PieceColor.EMPTY) selfColor = PieceColor.WHITE;
         }
         return move;
     }
@@ -368,12 +394,12 @@ public class AI extends core.player.AI {
 
     public Point generateRandomPosition() {
         Random rand = new Random();
-        int index1;
+        int index;
         do {
-            index1 = rand.nextInt(361);
-        } while (this.board.get(index1) == PieceColor.EMPTY);
+            index = rand.nextInt(361);
+        } while (this.board.get(index) == PieceColor.EMPTY);
 
-        return new Point(index1 % 19, index1 / 19);
+        return new Point(index % 19, index / 19);
     }
 
     /**
@@ -385,73 +411,71 @@ public class AI extends core.player.AI {
     public HashMap<Integer, ArrayList<Road>> generateRoads() {
         HashMap<Integer, ArrayList<Road>> list = new HashMap<>();
         int[] scores = {14, 66, 153, 790, 844, 100000};
-        int whiteValue = 0;
         int blackValue = 0;
-        ArrayList<Road> whiteRoads = new ArrayList<>();
+        int whiteValue = 0;
         ArrayList<Road> blackRoads = new ArrayList<>();
-        for (int row = 0; row < 19; ++row) {
-            for (int col = 0; col < 19; ++col) {
-                //遍历四个方向
+        ArrayList<Road> whiteRoads = new ArrayList<>();
+        for (int col = 0; col < 19; ++col) {
+            for (int row = 0; row < 19; ++row) {
+                //遍历四个方向 行向 列向 主对角线向 副对角线向 , 获取各个方向的路序列
                 for (int d = 0; d < 4; ++d) {
                     PieceColor[] roadColor = new PieceColor[6];
                     Point[] roadPosition = new Point[6];
                     int stonesNum = 0;
-
-                    if (d == 0 && row <= 13) { // 行
-                        for (int k = row; k < row + 6; ++k) {
-                            roadColor[k - row] = board.get(k, col);
-                            roadPosition[k - row] = new Point(k, col);
-                        }
-                        stonesNum = countStones(roadColor);
-                    }
-
-                    if (d == 1 && col <= 13) { // 列
+                    if (d == 0 && col <= 13) {
                         for (int k = col; k < col + 6; ++k) {
-                            roadColor[k - col] = board.get(row, k);
-                            roadPosition[k - col] = new Point(row, k);
+                            roadColor[k - col] = board.get(k, row);
+                            roadPosition[k - col] = new Point(k, row);
                         }
                         stonesNum = countStones(roadColor);
                     }
-
-                    if (d == 2 && row <= 13 && col <= 13) { // 主对角线
-                        for (int p = row, q = col; p <= row + 5; ++p, ++q) {
-                            roadColor[p - row] = board.get(p, q);
-                            roadPosition[p - row] = new Point(p, q);
+                    if (d == 1 && row <= 13) {
+                        for (int k = row; k < row + 6; ++k) {
+                            roadColor[k - row] = board.get(col, k);
+                            roadPosition[k - row] = new Point(col, k);
                         }
                         stonesNum = countStones(roadColor);
                     }
-
-                    if (d == 3 && row <= 13 && col >= 5) { // 副对角线
-                        for (int p = row, q = col; q >= col - 5; ++p, --q) {
-                            roadColor[col - q] = board.get(p, q);
-                            roadPosition[col - q] = new Point(p, q);
+                    if (d == 2 && col <= 13 && row <= 13) {
+                        for (int p = col, q = row; p <= col + 5; ++p, ++q) {
+                            roadColor[p - col] = board.get(p, q);
+                            roadPosition[p - col] = new Point(p, q);
                         }
                         stonesNum = countStones(roadColor);
                     }
-
-                    if (stonesNum > 0) {
+                    if (d == 3 && col <= 13 && row >= 5) {
+                        for (int p = col, q = row; q >= row - 5; ++p, --q) {
+                            roadColor[row - q] = board.get(p, q);
+                            roadPosition[row - q] = new Point(p, q);
+                        }
+                        stonesNum = countStones(roadColor);
+                    }
+                    if (stonesNum < 0) {
+                        blackRoads.add(new Road(PieceColor.BLACK, -stonesNum, roadColor, roadPosition));
+                        blackValue += scores[-stonesNum - 1];
+                    } else if (stonesNum > 0) {
                         whiteRoads.add(new Road(PieceColor.WHITE, stonesNum, roadColor, roadPosition));
                         whiteValue += scores[stonesNum - 1];
-                    } else if (stonesNum < 0) {
-                        blackRoads.add(new Road(PieceColor.BLACK, stonesNum, roadColor, roadPosition));
-                        blackValue -= scores[-stonesNum - 1];
                     }
                 }
             }
         }
+        list.put(-blackValue, blackRoads);
         list.put(whiteValue, whiteRoads);
-        list.put(blackValue, blackRoads);
+
+//        System.out.println(list.size());
         return list;
     }
+
 
     private int countStones(PieceColor[] roadColor) {
         int whiteNum = 0;
         int blackNum = 0;
         for (int i = 0; i < 6; i++) {
-            if (roadColor[i] == PieceColor.WHITE) whiteNum++;
-            else if (roadColor[i] == PieceColor.BLACK) blackNum++;
+            if (roadColor[i] == PieceColor.WHITE) ++whiteNum;
+            else if (roadColor[i] == PieceColor.BLACK) --blackNum;
         }
-        if (0 != blackNum * whiteNum || (blackNum | whiteNum) == 0) return 0;
+        if ((0 != blackNum * whiteNum) || (0 == (-blackNum + whiteNum))) return 0;
         return blackNum == 0 ? whiteNum : blackNum;
     }
 
@@ -463,8 +487,14 @@ public class AI extends core.player.AI {
         return "g09";
     }
 
+    @Override
+    public void playGame(Game game) {
+        super.playGame(game);
+        board = new G09Board();
+    }
+
     public static void main(String[] args) throws Exception {
         AI ai = new AI();
-        ai.findMove(new Move(1,2));
+        ai.findMove(new Move(1, 2));
     }
 }
