@@ -9,16 +9,26 @@ import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Random;
 
-import javafx.util.Pair;
-
 import static java.lang.Math.max;
 
+/**
+ * AI类，继承自core.player.AI类，实现了博弈的AI玩家
+ */
 public class AI extends core.player.AI {
+    // 存储自身颜色，默认为空
     private PieceColor selfColor = PieceColor.EMPTY;
-    private final int maxDepth = 1;
+    // 指定最大搜索深度为2
+    private final int maxDepth = 2;
+    // 创建棋盘对象
     G09Board board = new G09Board();
+    // 自身的所有有效路线
     private ArrayList<Road> selfRoads;
+    // 对手的所有有效路线
     private ArrayList<Road> opponentRoads;
+    // 最佳移动步骤
+    private Move bestMove = null;
+    // 临时存储一步棋的位置
+    private Point onePoint = null;
 
     /**
      * Return a legal move for me according to my opponent's move, and at that
@@ -60,40 +70,68 @@ public class AI extends core.player.AI {
         return move;
     }
 
-
-    private Move bestMove = null;
-
+    /**
+     * 寻找最佳移动步骤，使用alpha-beta剪枝算法
+     *
+     * @return 返回最佳移动步骤
+     */
     private Move findBestMove() {
         this.bestMove = null;
         alphaBeta(-Integer.MAX_VALUE, Integer.MAX_VALUE, maxDepth);
         return bestMove;
     }
 
+    /**
+     * Alpha-Beta剪枝算法，进行深度优先搜索，寻找最佳移动步骤
+     *
+     * @param alpha Alpha值
+     * @param beta Beta值
+     * @param depth 当前搜索深度
+     * @return 返回最佳移动步骤的评分值
+     */
     private int alphaBeta(int alpha, int beta, int depth) {
+        // 初始化局部变量
         int walkValue, bestValue = -Integer.MAX_VALUE;
+        // 当搜索到最大深度或游戏结束时，返回当前局面评估值
         if (depth == 0 || this.board.gameOver()) {
             return evaluate();
         }
 
+        // 生成当前局面的所有合法走法
         ArrayList<Move> moves = generateMove(depth);
+        // 对每一种走法进行搜索
         for (Move move : moves) {
+            // 按照当前走法走一步
             board.makeMove(move);
+            // 递归进行Alpha-Beta搜索
             walkValue = -alphaBeta(-beta, -alpha, depth - 1);
+            // 撤销刚才的走法
             board.undo();
+            // 更新bestValue和alpha值
             if (walkValue > bestValue) {
                 bestValue = walkValue;
                 alpha = max(bestValue, alpha);
+                // Beta剪枝
                 if (walkValue >= beta) break;
             }
 
+            // 在最大搜索深度下，更新最佳移动步骤
             if (depth == maxDepth && walkValue >= bestValue) bestMove = move;
         }
 
         return bestValue;
     }
 
+    /**
+     * 根据深度生成所有可能的移动方式
+     *
+     * @param depth 用于决定需要生成的移动方式的深度
+     * @return 所有可能的移动方式列表
+     */
     private ArrayList<Move> generateMove(int depth) {
+        // 初始化局部变量
         ArrayList<Move> moves = new ArrayList<>();
+        // 若之前有存储的待选走法，尝试进行这一步
         if (depth == maxDepth && onePoint != null) {
             this.board.makeOneMove(onePoint.c, onePoint.r, board.whoseMove());
             ArrayList<Point> points = generatePoint(20);
@@ -118,6 +156,12 @@ public class AI extends core.player.AI {
         return moves;
     }
 
+    /**
+     * 生成一组可能的棋子放置点
+     *
+     * @param num 需要生成的点的数量
+     * @return 生成的点的列表
+     */
     private ArrayList<Point> generatePoint(int num) {
         ArrayList<Point> points = new ArrayList<>();
         if (this.board.gameOver()) {
@@ -126,11 +170,11 @@ public class AI extends core.player.AI {
             return points;
         }
         HashMap<Integer, ArrayList<Road>> roads = generateRoads();
-        Pair<Integer, Integer> values = getSelfAndOpponentValues(roads);
+        IntPair values = getSelfAndOpponentValues(roads);
         int selfValue = values.getKey();
         ArrayList<Road> selfR = roads.get(selfValue);
 
-        //给出评分棋盘
+        // 评分
         int[] add = new int[]{1, 10, 100, 1000, 10000};
         int[] scores = new int[361];
         for (int i = 0; i < 361; ++i) {
@@ -146,7 +190,7 @@ public class AI extends core.player.AI {
                 }
             }
         }
-        //取得分最大的num个点
+        // 获取最大值
         int[] positions = new int[num];
         int maxScore;
         for (int j = 0; j < num; ++j) {
@@ -165,6 +209,11 @@ public class AI extends core.player.AI {
         return points;
     }
 
+    /**
+     * 评估当前棋盘状态的价值，以决定下一步的移动
+     *
+     * @return 当前棋盘状态的价值
+     */
     private int evaluate() {
         HashMap<Integer, ArrayList<Road>> roads = generateRoads();
         int whiteValue = (int) roads.keySet().toArray()[0];
@@ -180,8 +229,12 @@ public class AI extends core.player.AI {
         return selfValue - opponentValue;
     }
 
-    private Point onePoint = null;
 
+    /**
+     * 找到一个对对手产生威胁的移动方式
+     *
+     * @return 一个对对手产生威胁的移动方式，如果没有找到则返回null
+     */
     private Move findThreatMove() {
         int[] scores = new int[361];
         initializeScores(board, scores);
@@ -198,18 +251,33 @@ public class AI extends core.player.AI {
         return null;
     }
 
+    /**
+     * 初始化评分数组，根据当前棋盘状态给每个位置评分
+     *
+     * @param board 当前棋盘状态
+     * @param scores 用于存储评分的数组
+     */
     private void initializeScores(G09Board board, int[] scores) {
         for (int i = 0; i < 361; ++i) {
             if (board.get(i % 19, i / 19) != PieceColor.EMPTY) scores[i] = -1;
         }
     }
 
+    /**
+     * 计算对手道路的威胁等级。
+     *
+     * @param opponentRoads 对手的道路集合
+     * @param scores 道路的分数数组
+     * @return 威胁等级
+     */
     private int evaluateThreatenLevel(ArrayList<Road> opponentRoads, int[] scores) {
         int threatenLevel = -1;
 
+        // 遍历所有对手的道路
         for (Road road : opponentRoads) {
             int stonesNum = road.stonesNum;
 
+            // 对不同的石头数量进行处理
             if (stonesNum == 3) {
                 threatenLevel = handleThreeStones(road, scores, threatenLevel);
             } else if (stonesNum == 4) {
@@ -221,6 +289,14 @@ public class AI extends core.player.AI {
         return threatenLevel;
     }
 
+    /**
+     * 处理道路上有三个石头的情况
+     *
+     * @param opponentRoad 对手的道路
+     * @param scores 道路的分数数组
+     * @param threatenLevel 威胁等级
+     * @return 新的威胁等级
+     */
     private int handleThreeStones(Road opponentRoad, int[] scores, int threatenLevel) {
         int[] positions = new int[3];
         for (int i = 0, cnt = 0; i < 6; ++i) {
@@ -236,6 +312,14 @@ public class AI extends core.player.AI {
         return threatenLevel;
     }
 
+    /**
+     * 处理道路上有四个石头的情况
+     *
+     * @param opponentRoad 对手的道路
+     * @param scores 道路的分数数组
+     * @param threatenLevel 威胁等级
+     * @return 新的威胁等级
+     */
     private int handleFourStones(Road opponentRoad, int[] scores, int threatenLevel) {
         int mid = (opponentRoad.roadPosition[2].r * 19 + opponentRoad.roadPosition[2].c + opponentRoad.roadPosition[1].r * 19 + opponentRoad.roadPosition[1].c) / 2;
         int[] positions = new int[2];
@@ -273,6 +357,14 @@ public class AI extends core.player.AI {
         return (a - b) * (a - b);
     }
 
+    /**
+     * 处理道路上有五个石头的情况
+     *
+     * @param opponentRoad 对手的道路
+     * @param scores 道路的分数数组
+     * @param threatenLevel 威胁等级
+     * @return 新的威胁等级
+     */
     private int handleFiveStones(Road opponentRoad, int[] scores, int threatenLevel) {
         if (threatenLevel == 0) threatenLevel = 1;
         else if (threatenLevel == 1) threatenLevel = 2;
@@ -289,6 +381,12 @@ public class AI extends core.player.AI {
     }
 
 
+    /**
+     * 找到分数最高的两个位置
+     *
+     * @param scores 道路的分数数组
+     * @return 两个最高分数的位置
+     */
     private int[] findTopPositions(int[] scores) {
         int[] topPositions = new int[2];
 
@@ -307,14 +405,23 @@ public class AI extends core.player.AI {
     }
 
 
+    /**
+     * 设置自己和对手的道路
+     */
     private void setRoads() {
         HashMap<Integer, ArrayList<Road>> roads = generateRoads();
-        Pair<Integer, Integer> values = getSelfAndOpponentValues(roads);
+        IntPair values = getSelfAndOpponentValues(roads);
         selfRoads = roads.get(values.getKey());
         opponentRoads = roads.get(values.getValue());
     }
 
-    private Pair<Integer, Integer> getSelfAndOpponentValues(HashMap<Integer, ArrayList<Road>> roads) {
+    /**
+     * 获取自己和对手的值
+     *
+     * @param roads 道路集合
+     * @return 一个包含自己和对手值的键值对
+     */
+    private IntPair getSelfAndOpponentValues(HashMap<Integer, ArrayList<Road>> roads) {
         int whiteValue = (int) roads.keySet().toArray()[0];
         int blackValue = (int) roads.keySet().toArray()[1];
         if (whiteValue < 0) {
@@ -325,10 +432,16 @@ public class AI extends core.player.AI {
         int selfValue = (board.whoseMove() == PieceColor.WHITE ? whiteValue : blackValue);
         int opponentValue = whiteValue + blackValue - selfValue;
 
-        return new Pair<>(selfValue, opponentValue);
+        return new IntPair(selfValue, opponentValue);
     }
 
 
+    /**
+     * 寻找第一次移动
+     *
+     * @param opponentMove 对手的移动
+     * @return 本次移动
+     */
     private Move findFirstMove(Move opponentMove) {
         Move move = null;
         if (opponentMove == null) {
@@ -340,6 +453,11 @@ public class AI extends core.player.AI {
         return move;
     }
 
+    /**
+     * 寻找能够获胜的移动
+     *
+     * @return 能够获胜的移动
+     */
     private Move findWinMove() {
         for (Road road : this.selfRoads) {
             Point[] winPosition = new Point[2];
@@ -368,6 +486,11 @@ public class AI extends core.player.AI {
         return null;
     }
 
+    /**
+     * 随机生成一个可用的位置
+     *
+     * @return 随机生成的位置
+     */
     public Point generateRandomPosition() {
         Random rand = new Random();
         int index;
@@ -456,17 +579,56 @@ public class AI extends core.player.AI {
     }
 
     /**
-     * @return 返回名字
+     * 返回AI的名字
+     *
+     * @return AI的名字
      */
     @Override
     public String name() {
         return "g09";
     }
 
+    /**
+     * 在给定的游戏中玩游戏
+     *
+     * @param game 需要参与的游戏
+     */
     @Override
     public void playGame(Game game) {
         super.playGame(game);
         board = new G09Board();
     }
+
+    /**
+     * 该类用于存储一对整数值，提供了获取键值和数值的方法
+     */
+    public static class IntPair {
+        private final int key;
+        private final int value;
+
+        public IntPair(int key, int value) {
+            this.key = key;
+            this.value = value;
+        }
+
+        /**
+         * 获取键值
+         *
+         * @return 键值
+         */
+        public int getKey() {
+            return key;
+        }
+
+        /**
+         * 获取数值
+         *
+         * @return 数值
+         */
+        public int getValue() {
+            return value;
+        }
+    }
+
 
 }

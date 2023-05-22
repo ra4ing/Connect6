@@ -228,7 +228,7 @@ public class AI extends core.player.AI {
     }
 
     public Point onePoint=null;
-    public int maxDepth=1;//最大搜索深度
+    public int maxDepth=2;//最大搜索深度
 
     private Move findwin_if_win(ArrayList<Road> me){
         for(int i=0;i<me.size();++i)
